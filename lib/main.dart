@@ -1,98 +1,123 @@
 import 'package:flutter/material.dart';
 import 'pessoa.dart';
 
-void main() {
-  runApp(const IMCApp());
+class IMC {
+  final double peso;
+  final double altura;
+
+  IMC({required this.peso, required this.altura});
+
+  double calcular() {
+    return peso / (altura * altura);
+  }
+
+  @override
+  String toString() {
+    return 'IMC: ${calcular().toStringAsFixed(2)} (Peso: $peso kg, Altura: $altura m)';
+  }
 }
 
-class IMCApp extends StatelessWidget {
-  const IMCApp({super.key});
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Calculadora de IMC',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const IMCHomePage(),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const ImcPage(),
     );
   }
 }
 
-class IMCHomePage extends StatefulWidget {
-  const IMCHomePage({super.key});
+class ImcPage extends StatefulWidget {
+  const ImcPage({super.key});
 
   @override
-  State<IMCHomePage> createState() => _IMCHomePageState();
+  State<ImcPage> createState() => _ImcPageState();
 }
 
-class _IMCHomePageState extends State<IMCHomePage> {
-  final _formKey = GlobalKey<FormState>();
-  final _nomeController = TextEditingController();
-  final _pesoController = TextEditingController();
-  final _alturaController = TextEditingController();
-
-  String _resultado = '';
+class _ImcPageState extends State<ImcPage> {
+  final TextEditingController _pesoController = TextEditingController();
+  final TextEditingController _alturaController = TextEditingController();
+  final List<IMC> _resultados = [];
 
   void _calcularIMC() {
-    if (_formKey.currentState!.validate()) {
-      final nome = _nomeController.text;
-      final peso = double.parse(_pesoController.text);
-      final altura = double.parse(_alturaController.text);
+    try {
+      final double peso = double.parse(_pesoController.text);
+      final double altura = double.parse(_alturaController.text);
 
-      final pessoa = Pessoa(nome: nome, peso: peso, altura: altura);
-      final imc = pessoa.calcularIMC().toStringAsFixed(2);
-      final classificacao = pessoa.classificarIMC();
-
+      final imc = IMC(peso: peso, altura: altura);
       setState(() {
-        _resultado =
-            '$nome tem IMC = $imc\nClassificação: $classificacao';
+        _resultados.insert(0, imc); // insere no início da lista
       });
+
+      _pesoController.clear();
+      _alturaController.clear();
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Erro'),
+          content: const Text('Por favor, insira valores numéricos válidos.'),
+          actions: [
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Calculadora de IMC')),
+      appBar: AppBar(
+        title: const Text('Calculadora de IMC'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nomeController,
-                decoration: const InputDecoration(labelText: 'Nome'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Digite o nome' : null,
+        child: Column(
+          children: [
+            TextField(
+              controller: _pesoController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Peso (kg)'),
+            ),
+            TextField(
+              controller: _alturaController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Altura (m)'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _calcularIMC,
+              child: const Text('Calcular IMC'),
+            ),
+            const SizedBox(height: 24),
+            const Text('Resultados:', style: TextStyle(fontSize: 18)),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _resultados.length,
+                itemBuilder: (context, index) {
+                  final imc = _resultados[index];
+                  return ListTile(
+                    leading: const Icon(Icons.monitor_weight),
+                    title: Text(imc.toString()),
+                  );
+                },
               ),
-              TextFormField(
-                controller: _pesoController,
-                decoration: const InputDecoration(labelText: 'Peso (kg)'),
-                keyboardType: TextInputType.number,
-                validator: (value) =>
-                    double.tryParse(value ?? '') == null ? 'Digite o peso válido' : null,
-              ),
-              TextFormField(
-                controller: _alturaController,
-                decoration: const InputDecoration(labelText: 'Altura (m)'),
-                keyboardType: TextInputType.number,
-                validator: (value) =>
-                    double.tryParse(value ?? '') == null ? 'Digite a altura válida' : null,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _calcularIMC,
-                child: const Text('Calcular IMC'),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                _resultado,
-                style: const TextStyle(fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
